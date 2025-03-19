@@ -1,5 +1,7 @@
 %% Minimalistic DDE-Biftool demo Mackey-Glass Equation 
 %
+% <http://www.scholarpedia.org/article/Mackey-Glass_equation>
+%
 % The Mackey-Glass equation is given by
 % 
 % $$x'(t)=\beta \frac{x(t-\tau)}{1+x(t-\tau)^n}-\gamma x(t)$$
@@ -15,10 +17,12 @@ clr=lines();
 %% Define problem
 [ib,in,itau,ig]=deal(1,2,3,4); % define parameter indices
 f= @(x,b,n,g)b.*x(2,:)./(1+x(2,:).^n)-g.*x(1,:); % r.h.s., all vectorized for speed-up
+df1=@(x,n,dx,dn)1./(x.^n+1).^2.*(dx+dx.*x.^n-dx.*n.*x.^n-dn.*x.*x.^n.*log(x));
+df=@(x,b,n,g,dx,db,dn,dg)db.*x(2,:)./(1+x(2,:).^n)+b.*df1(x(2,:),n,dx(2,:),dn)-dg.*x(1,:)-g.*dx(1,:);
 %% Convert r.h.s. to DDE-Biftool f(x,p) format,
 % note that the parameters are row vectors for historic reasons
 funcs=set_funcs('sys_rhs',{1,[ib,in,ig],f},'sys_tau',@()itau,...
-    'x_vectorized',true,'p_vectorized',true); % set up problem
+    'sys_dirderi',{df},'x_vectorized',true,'p_vectorized',true); % set up problem
 %% Set initial guess for state and parameter
 % set boundaries, max stepsize, and perform initial correction.
 [b,n,tau,g]=deal(2, 10, 0,1);   % initial parameters

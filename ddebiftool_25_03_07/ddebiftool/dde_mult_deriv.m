@@ -29,6 +29,9 @@ else
     opts=remain(:,optstart:end);
     dev=remain(:,1:order);
 end
+if isfield(funcs,'hjac')&& ~isempty(funcs.hjac)
+    opts=[opts,{'hjac',funcs.hjac}];
+end
 %% choose function and set dimension of x
 xdim_is=2+double(incl_deriv);
 if ~isdelay
