@@ -4,6 +4,15 @@ ddebiftool_path([pwd(),'/ddebiftool_25_03_07']);
 format compact
 format short g
 load('S4_demo_psol_results.mat');
+%% Plot bifurcation diagram for equilibrium
+figure(5);clf;ax5=gca;hold(ax5,'on');
+Plot2dBranch(eq_1234ref,'ax',ax5);
+ehopf0=eq_1234ref.point(eq_1234bifind(1));
+plot(ehopf0.parameter(ip.tau_c),ehopf0.x(1),'ko',...
+    'DisplayName','Hopf','MarkerFaceColor','k')
+legend('Location','southeast')
+xlabel(ax5,'tau');ylabel(ax5,'x (eq)');set(ax5,'FontSize',16,'ylim',[0.19,0.21]);
+
 %% Find a few symmetries that one can branch off into
 % The function check_hopf below should return 2 zero singular value to
 % satisfy the equivariant Hopf bifurcation theorem

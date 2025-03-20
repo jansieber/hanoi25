@@ -14,10 +14,10 @@ clear
 ddebiftool_path([pwd(),'/ddebiftool_25_03_07']);
 format compact
 clr=lines();
-%% Define problem
+%% Define problem: rhs f and its directional derivative df
 [ib,in,itau,ig]=deal(1,2,3,4); % define parameter indices
 f= @(x,b,n,g)b.*x(2,:)./(1+x(2,:).^n)-g.*x(1,:); % r.h.s., all vectorized for speed-up
-df1=@(x,n,dx,dn)1./(x.^n+1).^2.*(dx+dx.*x.^n-dx.*n.*x.^n-dn.*x.*x.^n.*log(x));
+df1=@(x,n,dx,dn)1./(x.^n+1).^2.*(dx.*(1+x.^n-n.*x.^n)-dn.*x.*x.^n.*log(x));
 df=@(x,b,n,g,dx,db,dn,dg)db.*x(2,:)./(1+x(2,:).^n)+b.*df1(x(2,:),n,dx(2,:),dn)-dg.*x(1,:)-g.*dx(1,:);
 %% Convert r.h.s. to DDE-Biftool f(x,p) format,
 % note that the parameters are row vectors for historic reasons
@@ -36,6 +36,25 @@ figure(1);clf;ax1=gca;xlabel(ax1,'tau');ylabel(ax1,'x (eq)');set(ax1,'FontSize',
 eqbr=br_contn(funcs,eqbr,10,'ax',ax1);
 [eqbr_wbif,nunst_eqs,eqbifs,ihopf]=MonitorChange(funcs,eqbr);
 fprintf('Hopf bifurcation near point %d, tau=%g\n',ihopf(1),eqbr_wbif.point(ihopf(1)).parameter(itau));
+%% Illustrate eigenvalues of example point
+pt=eqbr_wbif.point(ihopf);
+[A,tau]=dde_stst_linearize_rhs(funcs,pt);
+pt.stability=dde_stst_eig_cheb(A,tau,'max_number_of_eigenvalues',50,'min_number_of_eigenvalues',50);
+figure(2);clf;ax2a=gca;
+plot(ax2a,real(pt.stability.l0),imag(pt.stability.l0),'o','LineWidth',2);
+grid(ax2a,'on');xlabel(ax2a,'Re');ylabel(ax2a,'Im');
+set(ax2a,'FontSize',16,'LineWidth',1,'xlim',[-10,1]);
+xline(ax2a,0,'LineWidth',1)
+%% Plot initial one-parameter bifuration diagram
+% Note that stability boundaries are not accurate after br_contn and
+% br_stable as these functions do not refine the branch. Use MonitorChange or
+% LocateSpecialPoints for refinement.
+figure(5);clf;ax5=gca;hold(ax5,'on');
+Plot2dBranch(eqbr_wbif,'ax',ax5);
+plot(eqbr_wbif.point(ihopf(1)).parameter(itau),eqbr_wbif.point(ihopf(1)).x,'ko',...
+    'DisplayName','Hopf','MarkerFaceColor','k')
+legend('Location','southeast')
+xlabel(ax5,'tau');ylabel(ax5,'x (eq)');set(ax5,'FontSize',16);
 %% Continue Hopf bifurcation in two parameters b and tau
 % starting from point where stability change was detected
 % (eqbr.point(ihopf)).
@@ -65,8 +84,6 @@ xlabel(ax4,'t/period');ylabel(ax4,'x(t)');set(ax4,'FontSize',16);
 figure(1);
 per_orb=br_contn(funcs,per_orb,60,'ax',ax1);
 [per_orb_wbif,nunst_per,perbifs,ipd]=MonitorChange(funcs,per_orb);
-%% Check that first stability change is a period doubling
-per_orb_wbif.point(ipd+1).stability.mu(1:3)
 %% plot all profiles, highlighting first period doubling
 figure(4);clf;ax4=gca;hold(ax4,'on');
 for i=1:length(per_orb.point)
@@ -76,6 +93,28 @@ end
 pt=per_orb_wbif.point(ipd+1);
 plot(ax4,pt.mesh,pt.profile,'k-','linewidth',3);
 xlabel(ax4,'t/period');ylabel(ax4,'x(t)');set(ax4,'FontSize',16);
+%% Illustrate Floquet multipliers of example periodic orbit
+ptper=per_orb_wbif.point(ipd);
+ptper.stability=dde_psol_eig(funcs,ptper,per_orb_wbif.method.stability,...
+    'geteigenfuncs',true,'eigmatrix','sparse');
+figure(6);clf;tiledlayout(1,2);nexttile; ax6a=gca;hold(ax6a,'on');
+plot(ax6a,real(ptper.stability.mu),imag(ptper.stability.mu),'o','LineWidth',2);
+s=linspace(0,2*pi,100);
+plot(ax6a,cos(s),sin(s),'k-','LineWidth',2);
+grid(ax6a,'on');xlabel(ax6a,'Re');ylabel(ax6a,'Im');
+set(ax6a,'FontSize',16,'LineWidth',1,'xlim',[-1.1,1.1],'DataAspectRatio',[1,1,1],...
+    'PlotBoxAspectRatio',[1,1,1]);
+nexttile;ax6b=gca;hold(ax6b,'on');grid(ax6b,'on');
+ef=ptper.stability.eigenfuncs(1:2);
+plot(ax6b,ef(1).mesh,[ef(1).profile;ef(2).profile],'linewidth',2)
+xlabel(ax6b,'t/period');ylabel(ax6b,'$\delta_x(t)$ (eigenfunction)','Interpreter','latex');set(ax4,'FontSize',16);
+set(ax6b,'FontSize',16,'LineWidth',1);
+%% Check that first stability change is a period doubling
+per_orb_wbif.point(ipd).stability.mu(1:3)
+%% Add periodic orbits to one-parameter bifuration diagram
+Plot2dBranch(per_orb_wbif,'ax',ax5);
+plot(per_orb_wbif.point(ipd).parameter(itau),max(per_orb_wbif.point(ipd).profile),'o','color',clr(1,:),...
+    'DisplayName','PD1','MarkerFaceColor',clr(1,:));
 %% Find period doubling bifurcations in two parameters
 [pdfuncs,pdbr1,suc]=SetupPeriodDoubling(funcs,per_orb_wbif,ipd,...
     'contpar',[ib,itau],'dir',ib,'step',1e-1,bounds{:},'plot_measure',[])
@@ -97,14 +136,8 @@ per2=br_contn(funcs,per2,60,'ax',ax1);
 % refinement.)
 figure(5);clf;ax5=gca;hold(ax5,'on');
 Plot2dBranch({eqbr_wbif,per_orb_wbif,per_orb2_wbif},'ax',ax5);
-plot(per_orb_wbif.point(1).parameter(itau),mean(per_orb_wbif.point(1).profile),'ko',...
-    'DisplayName','Hopf','MarkerFaceColor','k')
-plot(per_orb_wbif.point(ipd).parameter(itau),max(per_orb_wbif.point(ipd).profile),'o','color',clr(1,:),...
-    'DisplayName','PD1','MarkerFaceColor',clr(1,:));
 plot(per_orb2_wbif.point(ipd2(1)).parameter(itau),max(per_orb2_wbif.point(ipd2(1)).profile),'o','color',clr(4,:),...
     'DisplayName','PD2','MarkerFaceColor',clr(4,:));
-legend('Location','southeast')
-xlabel(ax5,'tau');ylabel(ax5,'x (eq)');set(ax5,'FontSize',16);
 %% Find secondary period doubling and track in two parameters
 [pd2funcs,pdbr2,suc]=SetupPeriodDoubling(funcs,per_orb2_wbif,ipd2,...
     'contpar',[ib,itau],'dir',ib,'step',1e-1,'plot_measure',[],bounds{:});
