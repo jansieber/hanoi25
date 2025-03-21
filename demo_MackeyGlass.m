@@ -81,16 +81,16 @@ xlabel(ax4,'t/period');ylabel(ax4,'x(t)');set(ax4,'FontSize',16);
 % Floquet multipliers are determined in call to br_stabl. The number of
 % unstable Floquet multipliers, nunst_per, indicates that stability is lost
 % for increasing tau.
-figure(1);
+figure(1);ylabel(ax1,'x(eq), max(x(t))')
 per_orb=br_contn(funcs,per_orb,60,'ax',ax1);
 [per_orb_wbif,nunst_per,perbifs,ipd]=MonitorChange(funcs,per_orb);
 %% plot all profiles, highlighting first period doubling
 figure(4);clf;ax4=gca;hold(ax4,'on');
-for i=1:length(per_orb.point)
+for i=1:length(per_orb_wbif.point)
     pt=per_orb_wbif.point(i);
     plot(ax4,pt.mesh,pt.profile,'r-');
 end
-pt=per_orb_wbif.point(ipd+1);
+pt=per_orb_wbif.point(ipd);
 plot(ax4,pt.mesh,pt.profile,'k-','linewidth',3);
 xlabel(ax4,'t/period');ylabel(ax4,'x(t)');set(ax4,'FontSize',16);
 %% Illustrate Floquet multipliers of example periodic orbit
@@ -112,8 +112,9 @@ set(ax6b,'FontSize',16,'LineWidth',1);
 %% Check that first stability change is a period doubling
 per_orb_wbif.point(ipd).stability.mu(1:3)
 %% Add periodic orbits to one-parameter bifuration diagram
+figure(5);
 Plot2dBranch(per_orb_wbif,'ax',ax5);
-plot(per_orb_wbif.point(ipd).parameter(itau),max(per_orb_wbif.point(ipd).profile),'o','color',clr(1,:),...
+plot(ax5,per_orb_wbif.point(ipd).parameter(itau),max(per_orb_wbif.point(ipd).profile),'o','color',clr(1,:),...
     'DisplayName','PD1','MarkerFaceColor',clr(1,:));
 %% Find period doubling bifurcations in two parameters
 [pdfuncs,pdbr1,suc]=SetupPeriodDoubling(funcs,per_orb_wbif,ipd,...
@@ -134,10 +135,11 @@ per2=br_contn(funcs,per2,60,'ax',ax1);
 % Note that stability boundaries are not accurate as we have not refined
 % the branch there. Use MonitorChange or LocateSpecialPoints for
 % refinement.)
-figure(5);clf;ax5=gca;hold(ax5,'on');
-Plot2dBranch({eqbr_wbif,per_orb_wbif,per_orb2_wbif},'ax',ax5);
+figure(5);
+Plot2dBranch(per_orb2_wbif,'ax',ax5);
 plot(per_orb2_wbif.point(ipd2(1)).parameter(itau),max(per_orb2_wbif.point(ipd2(1)).profile),'o','color',clr(4,:),...
     'DisplayName','PD2','MarkerFaceColor',clr(4,:));
+legend(ax5,'Location','southeast');
 %% Find secondary period doubling and track in two parameters
 [pd2funcs,pdbr2,suc]=SetupPeriodDoubling(funcs,per_orb2_wbif,ipd2,...
     'contpar',[ib,itau],'dir',ib,'step',1e-1,'plot_measure',[],bounds{:});
